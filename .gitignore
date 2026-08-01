@@ -1,0 +1,29 @@
+# Credentials and session
+.env
+naukri_session.json
+data/
+
+# Debug artifacts
+headless_profile_debug.png
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual environments
+venv/
+.venv/
+env/
+
+# Playwright
+playwright-report/
+
+# OS
+.DS_Store
+Thumbs.db

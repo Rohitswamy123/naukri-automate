@@ -1,0 +1,21 @@
+services:
+  naukri-updater:
+    build: .
+    container_name: naukri_auto_update
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      # Headless is handled by Xvfb inside container
+      - SESSION_FILE=/app/data/naukri_session.json
+      - HEADLESS=false
+      - TZ=Asia/Kolkata
+    volumes:
+      # Persist session file locally so you can inspect/reuse it
+      - ./data:/app/data
+    shm_size: "256mb"     # Chromium needs extra shared memory
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
