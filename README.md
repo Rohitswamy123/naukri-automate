@@ -56,6 +56,9 @@ Create a virtual environment and install packages:
 ```bash
 python3 -m venv .venv
 source .venv/bin/activate
+
+#for windows
+.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
 playwright install chromium
 ```

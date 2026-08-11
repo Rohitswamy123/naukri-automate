@@ -9,6 +9,16 @@ def random_delay(min_sec: float = 1.0, max_sec: float = 2.5) -> None:
     time.sleep(delay)
 
 
+def scroll_to_load_sections(page) -> None:
+    """Scroll down the profile page to trigger lazy-loading of all widgets."""
+    log("Scrolling down page to trigger lazy-loading of widgets...")
+    for _ in range(8):
+        page.evaluate("window.scrollBy(0, 800);")
+        page.wait_for_timeout(350)
+    page.evaluate("window.scrollTo(0, 0);")
+    page.wait_for_timeout(500)
+
+
 def open_profile(page, profile_url: str) -> None:
     log("Opening profile page...")
     page.goto(profile_url, wait_until="load")
@@ -37,31 +47,37 @@ def touch_profile_summary_space(page, profile_url: str) -> bool:
     This guarantees no truncation, no double-appends, and strictly enforces the 1000-character limit.
     """
     log("Starting Profile Summary ending rotation touch...")
+    scroll_to_load_sections(page)
 
     base_summary = (
-        "Senior DevOps Engineer with 5+ years of experience architecting, automating, and scaling high-availability "
-        "multi-cloud infrastructure across AWS (EKS, EC2, VPC, ALB, Route 53) and Microsoft Azure (AKS, APIM, AppGW, "
-        "Azure SQL, Azure AI foundry). Strong expertise in Kubernetes administration, designing GitOps delivery pipelines "
-        "(ArgoCD), and Infrastructure as Code using Terraform and Terragrunt. Proficient in configuring CI/CD automation "
-        "(GitHub Actions, Azure DevOps, Jenkins), robust observability stacks (Prometheus, Grafana, Loki, EFK), and "
-        "administering HA databases (PostgreSQL, MongoDB). Actively focused on driving DevSecOps, zero-trust architecture, "
-        "and resilient self-service platforms, with a strong passion for scaling SRE practices, establishing strict SLOs, "
-        "and achieving zero-downtime deployments."
+        "Senior Product & Analytics professional with 6+ years of experience building AI-powered, data-driven "
+        "products across fintech, healthtech, and global marketplace platforms. Strong expertise in product "
+        "analytics, experimentation, customer journey optimization, KPI frameworks, and end-to-end product "
+        "lifecycle management, leveraging SQL, Python, Redshift, Tableau, Power BI, Amplitude, and modern BI "
+        "ecosystems. Proficient in designing scalable data models, self-serve analytics platforms, forecasting "
+        "solutions, fraud intelligence systems, and AI-driven analytical workflows while collaborating with "
+        "engineering, design, and business stakeholders."
     )
 
     summary_endings_pool = [
-        " Proven track record integrating MLOps/ Agentic AI workflows (Ollama, n8n) for platform automation and driving cloud cost-optimization initiatives that saved $20,000 annually.",
-        " Dedicated to advancing MLOps platforms using Kafka streams and Evidently drift detection for automated, closed-loop model retraining and efficient AI operations.",
-        " Highly skilled in deep observability, implementing OpenTelemetry tracing and Prometheus burn-rate alerts to maintain strict model-serving SLOs across environments.",
-        " Committed to zero-downtime AI delivery, leveraging KServe canary rollouts and ArgoCD to seamlessly orchestrate hybrid-cloud LLM and model deployments.",
-        " Demonstrated success in FinOps governance and Agentic AI operations, deploying LiteLLM gateways with token-level cost metrics to optimize internal LLM infrastructure."
+        " Proven track record delivering AI-powered analytics solutions, intelligent automation, and data-driven product strategies that improved customer experience and operational efficiency.",
+        " Dedicated to building AI-first product experiences through experimentation, customer behavior analytics, and scalable analytics platforms that drive measurable business growth.",
+        " Highly skilled in transforming large-scale product and customer data into actionable insights, enabling continuous optimization across acquisition, retention, fraud prevention, and monetization.",
+        " Committed to building self-serve analytics ecosystems, AI-assisted decision frameworks, and scalable data products that empower product, engineering, and business teams.",
+        " Demonstrated success driving product innovation through AI-enabled analytics, experimentation, cross-functional collaboration, and customer-centric decision making.",
+        " Passionate about leveraging AI, advanced analytics, and experimentation to uncover customer insights, optimize product strategy, and accelerate data-informed decision making.",
+        " Focused on building intelligent analytics solutions, scalable KPI frameworks, and predictive models that enable faster product decisions and sustainable business outcomes.",
+        " Experienced in translating complex business problems into scalable product solutions through AI-driven analytics, robust experimentation, and continuous product optimization."
     ]
 
     # 1. Target the Edit button
     summary_edit_selectors = [
+        "xpath=//span[text()='Profile summary']/following-sibling::span[contains(@class, 'edit')]",
+        "xpath=//span[text()='Profile summary']/parent::div/span[contains(@class, 'edit')]",
+        "xpath=//span[contains(text(), 'Profile summary')]/following-sibling::span[contains(@class, 'edit')]",
+        "xpath=//span[text()='Profile summary']/following-sibling::span[text()='editOneTheme']",
         "xpath=//p[text()='Profile summary']/following-sibling::span",
         "xpath=//p[text()='Profile summary']/parent::div/span",
-        "xpath=//p[contains(text(), 'Profile summary')]/following-sibling::span",
     ]
 
     clicked = False
@@ -84,9 +100,9 @@ def touch_profile_summary_space(page, profile_url: str) -> bool:
         log("Could not find the Profile Summary edit button.")
         return False
 
-    # 2. Wait for drawer to load
+    # 2. Wait for drawer to load and textarea to appear
     try:
-        page.wait_for_selector("[role='dialog'], .modal, [class*='modal'], [class*='drawer']", state="visible", timeout=5000)
+        page.wait_for_selector("#profileSummaryTxt, textarea[name='profileSummary'], textarea", state="visible", timeout=6000)
         # Human delay after drawer loads
         random_delay(1.0, 2.5)
     except Exception:
@@ -94,8 +110,8 @@ def touch_profile_summary_space(page, profile_url: str) -> bool:
 
     # 3. Locate the textarea inside the drawer container
     try:
-        textarea = page.locator("[role='dialog'] textarea, .modal textarea, [class*='drawer'] textarea").first
-        textarea.wait_for(state="visible", timeout=3000)
+        textarea = page.locator("#profileSummaryTxt, textarea[name='profileSummary'], textarea").first
+        textarea.wait_for(state="visible", timeout=4000)
     except Exception as e:
         log(f"Failed to find or focus the summary textarea: {e}")
         return False
@@ -134,20 +150,25 @@ def touch_profile_summary_space(page, profile_url: str) -> bool:
 
     # 6. Click the Save button inside the drawer
     save_button_selectors = [
-        "[role='dialog'] button:has-text('Save')",
-        ".modal button:has-text('Save')",
-        "[class*='drawer'] button:has-text('Save')",
+        "button.btn-dark-ot:has-text('Save')",
+        "button[type='submit']:has-text('Save')",
+        "input.yes[value='Save']",
+        "input[value='Save']",
         "button:has-text('Save')",
     ]
     
     saved = False
     for selector in save_button_selectors:
         try:
-            btn = page.locator(selector).first
-            if btn.is_visible(timeout=2000):
-                btn.click()
-                saved = True
-                log(f"Clicked save button: {selector}")
+            buttons = page.locator(selector).all()
+            for btn in buttons:
+                if btn.is_visible(timeout=1000):
+                    btn.scroll_into_view_if_needed()
+                    btn.click()
+                    saved = True
+                    log(f"Clicked save button: {selector}")
+                    break
+            if saved:
                 break
         except Exception:
             continue
@@ -184,8 +205,8 @@ def touch_profile_summary_space(page, profile_url: str) -> bool:
                 continue
                 
         if verify_clicked:
-            page.wait_for_selector("[role='dialog'] textarea, .modal textarea, [class*='drawer'] textarea", state="visible", timeout=6000)
-            verify_textarea = page.locator("[role='dialog'] textarea, .modal textarea, [class*='drawer'] textarea").first
+            page.wait_for_selector("#profileSummaryTxt, textarea[name='profileSummary'], textarea", state="visible", timeout=6000)
+            verify_textarea = page.locator("#profileSummaryTxt, textarea[name='profileSummary'], textarea").first
             new_saved_text = verify_textarea.input_value().strip()
             
             # Close drawer
@@ -214,13 +235,17 @@ def touch_expected_salary_toggle(page, profile_url: str) -> bool:
     Incorporates human-like timing/delays.
     """
     log("Starting Expected Salary toggle touch...")
+    scroll_to_load_sections(page)
     
     # 1. Click Preferences edit button
     pencil_selectors = [
+        "xpath=//div[contains(@class, 'desiredProfile')]//span[contains(@class, 'edit')]",
+        "xpath=//span[text()='Career profile']/following-sibling::span[contains(@class, 'edit')]",
+        "xpath=//span[text()='Career profile']/parent::div/span[contains(@class, 'edit')]",
+        "xpath=//span[text()='Career profile']/following-sibling::span[text()='editOneTheme']",
+        ".desiredProfile .edit.icon",
+        ".desiredProfile [class*='edit']",
         "xpath=//div[@id='profile-section-preferences']//span[img[@alt='PencilSimple']]",
-        "xpath=//div[@id='profile-section-preferences']//span[contains(@class, 'cursor-pointer')]",
-        "#profile-section-preferences span[img[@alt='PencilSimple']]",
-        "#profile-section-preferences img[alt='PencilSimple']"
     ]
     
     clicked = False
@@ -244,17 +269,28 @@ def touch_expected_salary_toggle(page, profile_url: str) -> bool:
         return False
 
     # 2. Wait for expected CTC input
-    try:
-        page.wait_for_selector("input[name='absoluteExpectedCtc']", state="visible", timeout=6000)
-        # Human delay after drawer loads
-        random_delay(1.0, 2.5)
-    except Exception as e:
-        log(f"Preferences edit drawer or expected CTC input failed to load: {e}")
+    ctc_selectors = [
+        "input[placeholder='Eg. 4,50,000']",
+        "xpath=//input[@placeholder='Eg. 4,50,000']",
+        "input[name='absoluteExpectedCtc']",
+    ]
+    
+    selected_ctc_selector = None
+    for selector in ctc_selectors:
+        try:
+            if page.locator(selector).first.is_visible(timeout=2000):
+                selected_ctc_selector = selector
+                break
+        except Exception:
+            continue
+            
+    if not selected_ctc_selector:
+        log("Expected CTC input failed to load or be visible in the drawer.")
         return False
 
     # 3. Locate expected CTC input and determine target toggle value
     try:
-        input_field = page.locator("input[name='absoluteExpectedCtc']").first
+        input_field = page.locator(selected_ctc_selector).first
         current_val_raw = input_field.input_value().strip()
         log(f"Current expected CTC raw value: '{current_val_raw}'")
 
@@ -307,24 +343,26 @@ def touch_expected_salary_toggle(page, profile_url: str) -> bool:
 
     # 6. Click Save inside the drawer
     save_button_selectors = [
-        "[role='dialog'] button:has-text('Save')",
-        ".modal button:has-text('Save')",
-        "[class*='drawer'] button:has-text('Save')",
+        "input.yes[value='Save']",
+        "input[value='Save']",
+        "button.btn-dark-ot:has-text('Save')",
+        "button[type='submit']:has-text('Save')",
         "button:has-text('Save')",
     ]
 
     saved = False
     for selector in save_button_selectors:
         try:
-            btn = page.locator(selector).first
-            if btn.is_visible(timeout=2000):
-                btn.click()
-                saved = True
-                log(f"Clicked save button: {selector}")
+            buttons = page.locator(selector).all()
+            for btn in buttons:
+                if btn.is_visible(timeout=1000):
+                    btn.scroll_into_view_if_needed()
+                    btn.click()
+                    saved = True
+                    log(f"Clicked save button: {selector}")
+                    break
+            if saved:
                 break
-            else:
-                page.evaluate("const drawer = document.querySelector('[role=\"dialog\"], .modal, [class*=\"drawer\"]'); if (drawer) drawer.scrollTop = drawer.scrollHeight;")
-                page.wait_for_timeout(500)
         except Exception:
             continue
 
@@ -363,10 +401,21 @@ def touch_expected_salary_toggle(page, profile_url: str) -> bool:
                 continue
 
         if clicked:
-            page.wait_for_selector("input[name='absoluteExpectedCtc']", state="visible", timeout=6000)
+            verify_ctc_selector = None
+            for selector in ctc_selectors:
+                try:
+                    if page.locator(selector).first.is_visible(timeout=2000):
+                        verify_ctc_selector = selector
+                        break
+                except Exception:
+                    continue
+            if not verify_ctc_selector:
+                log("Verification notice: Could not locate expected CTC input after reload.")
+                return True
+                
             # Human delay inside modal before closing
             random_delay(1.5, 2.5)
-            verify_field = page.locator("input[name='absoluteExpectedCtc']").first
+            verify_field = page.locator(verify_ctc_selector).first
             new_val_clean = verify_field.input_value().strip().replace(",", "")
             
             # Close drawer
